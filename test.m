@@ -17,7 +17,7 @@ for gpu_use = 0:1
 end
 
 
-function test = gpu(M, gpu_use)
+function M = gpu(M, gpu_use)
     if gpu_use == 1
         M = gpuArray(M);
     end
