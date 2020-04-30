@@ -1,106 +1,55 @@
+//
+//  main.cpp
+//  hi
+//
+//  Created by Willy Wu on 2020/4/30.
+//  Copyright © 2020 Willy Wu. All rights reserved.
+//
+
+// mat.cpp
 #include <iostream>
-#include <stdlib.h>
-#include <time.h>
-#include <sys/time.h>
-#include "matrix.h"
+#include <string>
+#include <random>
+#include <vector>
+// #include <ctime>
 
-typedef pair<matrix, long> result;
+using namespace std;
 
-int cut = 64;
-
-matrix mult_std(matrix a, matrix b) {
-	matrix c(a.dim(), false, false);
-	for (int i = 0; i < a.dim(); i++)
-		for (int k = 0; k < a.dim(); k++)
-			for (int j = 0; j < a.dim(); j++)
-				c(i,j) += a(i,k) * b(k,j);
-	
-	return c;
+double to_double(int num) {
+    return static_cast<double>(num);
 }
 
-matrix get_part(int pi, int pj, matrix m) {
-	matrix p(m.dim() / 2, false, true);
-	pi = pi * p.dim();
-	pj = pj * p.dim();
-	
-	for (int i = 0; i < p.dim(); i++)
-		for (int j = 0; j < p.dim(); j++)
-			p(i,j) = m(i + pi,j + pj);
-			
-	return p;
+double sec(clock_t start, clock_t end) {
+    return to_double(end-start)/to_double(CLOCKS_PER_SEC);
 }
 
-void set_part(int pi, int pj, matrix* m, matrix p) {
-	pi = pi * p.dim();
-	pj = pj * p.dim();
-	
-	for (int i = 0; i < p.dim(); i++)
-		for (int j = 0; j < p.dim(); j++)
-			(*m)(i + pi,j + pj) = p(i,j);
-}
-
-matrix mult_strassen(matrix a, matrix b) {
-	if (a.dim() <= cut)
-		return mult_std(a, b);
-
-	matrix a11 = get_part(0, 0, a);
-	matrix a12 = get_part(0, 1, a);
-	matrix a21 = get_part(1, 0, a);
-	matrix a22 = get_part(1, 1, a);
-	
-	matrix b11 = get_part(0, 0, b);
-	matrix b12 = get_part(0, 1, b);
-	matrix b21 = get_part(1, 0, b);
-	matrix b22 = get_part(1, 1, b);
-	
-	matrix m1 = mult_strassen(a11 + a22, b11 + b22); 
-	matrix m2 = mult_strassen(a21 + a22, b11);
-	matrix m3 = mult_strassen(a11, b12 - b22);
-	matrix m4 = mult_strassen(a22, b21 - b11);
-	matrix m5 = mult_strassen(a11 + a12, b22);
-	matrix m6 = mult_strassen(a21 - a11, b11 + b12);
-	matrix m7 = mult_strassen(a12 - a22, b21 + b22);
-	
-	matrix c(a.dim(), false, true);
-	set_part(0, 0, &c, m1 + m4 - m5 + m7);
-	set_part(0, 1, &c, m3 + m5);
-	set_part(1, 0, &c, m2 + m4);
-	set_part(1, 1, &c, m1 - m2 + m3 + m6);
-	
-	return c;
-}
-
-pair<matrix, long> run(matrix (*f)(matrix, matrix), matrix a, matrix b) {
-	struct timeval start, end;
-	
-	gettimeofday(&start, NULL);
-	matrix c = f(a, b);
-	gettimeofday(&end, NULL);
-	long e = (end.tv_sec * 1000 + end.tv_usec / 1000);
-	long s =(start.tv_sec * 1000 + start.tv_usec / 1000);
-	
-	return pair<matrix, long> (c, e - s);
+vector<vector<double>> expand(vector<vector<double>> M) {
+    for (int i=0; i<M[0].size(); i++) {
+        M[i].insert(M[i].begin(), 1, 0.0);
+        M[i].push_back(0.0);
+    }
+    M.push_back(vector<double>(M[0].size(), 0.0));
+    M.insert(M.begin(), 1, vector<double>(M[0].size()));
+    
+    return M;
 }
 
 int main() {
-	/* test cut of for strassen
-	/*
-	for (cut = 2; cut <= 512; cut++) {
-		matrix a(512, true, true);
-		matrix b(512, true, true);
-		result r = run(mult_strassen, a, b);
-		cout << cut << " " << r.second << "\n";
-	}
-	*/
-	
-	/* performance test: standard and strassen */
-	for (int dim = 0; dim <= 1024; dim += 64) {
-		matrix a(dim, true, false);
-		matrix b(dim, true, false);
-		result std = run(mult_std, a, b);
-		matrix c(dim, true, true);
-		matrix d(dim, true, true);
-		result strassen = run(mult_strassen, c, d);
-		cout << dim << " " << std.second << " " << strassen.second << "\n";
-	}
+
+    default_random_engine generator;
+    normal_distribution<double> distribution(0.0, 1.0);
+    int dim = 300;
+    vector<vector<double>> M;
+    
+    for (int i=0; i<dim; i++) {
+        vector<double> temp;
+        for (int j=0; j<dim; j++)
+            temp.push_back(distribution(generator));
+        M.push_back(temp);
+    }
+    
+    clock_t start = clock();
+    expand(M);
+    clock_t end = clock();
+    cout << sec(start, end) << endl;
 }
